@@ -1,0 +1,87 @@
+{% extends "layout.html" %}
+
+{% block title %}Configure Devices{% endblock %}
+
+{% block content %}
+    <h3>Configure Devices</h3>
+
+    <!-- Mensagem de erro para valores duplicados -->
+    <div id="errorMessage" class="alert alert-danger" style="display: none;">
+        Please check the GPIO values. Each GPIO value must be unique.
+    </div>
+
+    <form method="POST" action="{{ url_for('setup') }}" onsubmit="return validateGpioValues()">
+        <label>Number of Devices:</label>
+        <select id="numDevices" name="num_devices" onchange="displayGpioFields()" required>
+            <option value="" selected>Select...</option>
+            {% for i in range(1, 27) %}
+                <option value="{{ i }}">{{ i }}</option>
+            {% endfor %}
+        </select>
+
+        <!-- Container for the table of devices and GPIO inputs -->
+        <div id="gpioTableContainer" style="display: none;">
+            <table class="table mt-3">
+                <thead>
+                    <tr>
+                        <th scope="col">Device</th>
+                        <th scope="col">GPIO</th>
+                    </tr>
+                </thead>
+                <tbody id="gpioContainer">
+                    <!-- Dynamic rows will be added here -->
+                </tbody>
+            </table>
+            <button type="submit" class="btn btn-primary float-end">
+                <img src="{{ url_for('static', filename='icons/check-circle.svg') }}" width="24" height="24" fill="currentColor" viewBox="0 0 16 16" alt="Save">
+            </button>
+        </div>
+        
+
+    </form>
+
+    <script>
+        function displayGpioFields() {
+            const numDevices = document.getElementById('numDevices');
+            const selectedValue = numDevices.value;
+            const tableContainer = document.getElementById('gpioTableContainer');
+            const container = document.getElementById('gpioContainer');
+            container.innerHTML = '';
+
+            // Show the table only if a valid number is selected
+            if (selectedValue) {
+                tableContainer.style.display = 'block';
+                numDevices.options[0].disabled = true;
+            } else {
+                tableContainer.style.display = 'none';
+                numDevices.options[0].disabled = false;
+            }
+
+            // Display GPIO input fields based on the selected number of devices
+            for (let i = 1; i <= selectedValue; i++) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>P${i.toString().padStart(2, '0')}</td>
+                    <td><input type="number" name="gpio_${i}" min="2" max="26" required class="form-control"></td>
+                `;
+                container.appendChild(row);
+            }
+        }
+
+        function validateGpioValues() {
+            const gpioInputs = document.querySelectorAll('[name^="gpio_"]');
+            const gpioValues = Array.from(gpioInputs).map(input => input.value);
+            const uniqueValues = new Set(gpioValues);
+
+            // Check for duplicate values
+            if (uniqueValues.size !== gpioValues.length) {
+                document.getElementById("errorMessage").style.display = "block"; // Show error message
+                return false; // Prevent form submission
+            } else {
+                document.getElementById("errorMessage").style.display = "none"; // Hide error message if no duplicates
+                return true; // Allow form submission
+            }
+        }
+    </script>
+    
+{% endblock %}
