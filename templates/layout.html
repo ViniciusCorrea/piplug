@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PiPlug{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <!--  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">  -->
+</head>
+<body>
+    <!-- Header Section -->
+    <header class="d-flex align-items-center p-3 border-bottom">
+        <!-- Logo with link to open modal -->
+        <a href="#" data-bs-toggle="modal" data-bs-target="#aboutModal" style="cursor: pointer;">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" width="50" alt="PiPlug Logo">
+        </a>
+        <!-- Project Name -->
+        <h1 class="ms-3">PiPlug</h1>
+    </header>
+
+    <!-- Main Content Section -->
+    <main class="container mt-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- About Modal -->
+    <div class="modal fade" id="aboutModal" tabindex="-1" aria-labelledby="aboutModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="aboutModalLabel">About PiPlug</h5>
+                </div>
+                <div class="modal-body">
+                    Meeting process and task automation needs.
+                    <br><br>
+                    <a href="https://github.com/ViniciusCorrea/piplug" target="_blank">Visit PiPlug on GitHub</a>
+                </div>
+                <div class="modal-footer">
+                    <!-- Return Button -->
+                    <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">
+                        <img src="{{ url_for('static', filename='icons/arrow-left-circle.svg') }}" width="24" height="24" alt="Return">
+                    </button>
+                    <!-- Log Button -->
+                    {% if show_log_button %}
+                    <a href="/log" class="btn btn-light ms-2">
+                        <img src="{{ url_for('static', filename='icons/file-text-fill.svg') }}" width="24" height="24" alt="Log">
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript (Bootstrap) -->
+    <script src="{{ url_for('static', filename='js/popper.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+</body>
+</html>
