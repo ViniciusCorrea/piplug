@@ -1,0 +1,85 @@
+{% extends "layout.html" %}
+
+{% block title %}Device: {{ name }}{% endblock %}
+
+{% block content %}
+<h2>Device: {{ name }}</h2>
+
+<!-- Exibir a mensagem de alerta para o timer -->
+{% if tactive and time_remaining %}
+    <div class="alert alert-info">
+        The device will turn {{ 'on' if tnewState else 'off' }} in 
+        {{ time_remaining.seconds // 3600 }} hour(s),
+        {{ (time_remaining.seconds // 60) % 60 }} minute(s) and
+        {{ time_remaining.seconds % 60 }} second(s).
+    </div>
+{% endif %}
+<!-- Tabela com as informações do dispositivo -->
+<table class="table">
+    <tr>
+        <th>Status</th>
+        <td>
+                <a href="/toggle_device/{{ plugID }}" class="btn btn-secondary">
+                    {% if state %}
+                        <img src="{{ url_for('static', filename='icons/lightbulb-fill.svg') }}" width="24" height="24" alt="On">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='icons/lightbulb.svg') }}" width="24" height="24" alt="Off">
+                    {% endif %}
+                </a>
+        </td>
+    </tr>
+    <tr>
+        <th>Plug ID</th>
+        <td>{{ plugID }}</td>
+    </tr>
+    <tr>
+        <th>Name</th>
+        <td>
+            {{ name }}
+            <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#editNameModal">
+                <img src="{{ url_for('static', filename='icons/pencil.svg') }}" width="20" height="20" alt="Edit">
+            </button>
+        </td>
+    </tr>
+    <tr>
+        <th>GPIO</th>
+        <td>{{ gpio }}</td>
+    </tr>
+</table>
+
+<!-- Botões de navegação -->
+<div class="d-flex justify-content-end">
+    <a href="{{ url_for('index') }}" class="btn btn-secondary me-2">
+        <img src="{{ url_for('static', filename='icons/arrow-left-circle.svg') }}" width="24" height="24" alt="Back">
+    </a>
+    <a href="{{ url_for('timer', plugID=plugID) }}" class="btn {{ 'btn-success' if tactive else 'btn-primary' }}">
+        <img src="{{ url_for('static', filename='icons/clock-history.svg') }}" width="24" height="24" alt="Timer">
+    </a>
+</div>
+
+<!-- Modal para editar o nome -->
+<div class="modal fade" id="editNameModal" tabindex="-1" aria-labelledby="editNameModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editNameModalLabel">Edit Name</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('update_name', plugID=plugID) }}">
+                <div class="modal-body">
+                    <label for="newName" class="form-label">Enter new name:</label>
+                    <input type="text" class="form-control" id="newName" name="newName" value="{{ name }}" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <img src="{{ url_for('static', filename='icons/arrow-left-circle.svg') }}" width="24" height="24" alt="Back">
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <img src="{{ url_for('static', filename='icons/check-circle.svg') }}" width="24" height="24" alt="Save">
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

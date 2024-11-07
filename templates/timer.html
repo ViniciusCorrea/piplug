@@ -1,0 +1,65 @@
+{% extends "layout.html" %}
+
+{% block title %}Timer for {{ name }}{% endblock %}
+
+{% block content %}
+<h2>Timer for {{ name }}</h2>
+
+<form method="POST" action="{{ url_for('timer', plugID=plugID) }}" onsubmit="return validateForm()">
+    <!-- Checkbox para ativar/desativar o timer -->
+    <div class="form-group mb-3">
+        <label>Activate Timer:</label>
+        <button type="button" id="toggleActivated" class="btn {% if tactive %}btn-success{% else %}btn-secondary{% endif %}">
+            <img src="{{ url_for('static', filename='icons/toggle-on.svg') if tactive else url_for('static', filename='icons/toggle-off.svg') }}" width="24" height="24">
+        </button>
+        <input type="hidden" id="activated" name="tactive" value="{{ 'on' if tactive else 'off' }}">
+    </div>
+
+    <!-- Campo de entrada de horas e minutos -->
+    <div class="form-group mb-3">
+        <label for="hourInput">Hour:</label>
+        <input type="number" id="hourInput" name="hour" min="0" max="23" value="{{ thour }}" class="form-control" required>
+    </div>
+    <div class="form-group mb-3">
+        <label for="minuteInput">Minute:</label>
+        <input type="number" id="minuteInput" name="minute" min="0" max="59" value="{{ tminute }}" class="form-control" required>
+    </div>
+
+    <!-- Dropdown para tnewState -->
+    <div class="form-group mb-3">
+        <label for="newStatusSelect">Action:</label>
+        <select id="newStatusSelect" name="newStatus" class="form-control">
+            <option value="on" {% if tnewState %}selected{% endif %}>On</option>
+            <option value="off" {% if not tnewState %}selected{% endif %}>Off</option>
+        </select>
+    </div>
+
+    <!-- Botões de navegação -->
+    <div class="d-flex justify-content-end">
+        <a href="{{ url_for('device', plugID=plugID) }}" class="btn btn-secondary me-2">
+            <img src="{{ url_for('static', filename='icons/arrow-left-circle.svg') }}" width="24" height="24" alt="Back">
+        </a>
+        <button type="submit" class="btn btn-primary">
+            <img src="{{ url_for('static', filename='icons/check-circle.svg') }}" width="24" height="24" alt="Save">
+        </button>
+    </div>
+</form>
+
+<script>
+    document.getElementById("toggleActivated").addEventListener("click", function() {
+        const activatedInput = document.getElementById("activated");
+        if (activatedInput.value === "on") {
+            activatedInput.value = "off";
+            this.classList.remove("btn-success");
+            this.classList.add("btn-secondary");
+            this.innerHTML = `<img src="{{ url_for('static', filename='icons/toggle-off.svg') }}" width="24" height="24">`;
+        } else {
+            activatedInput.value = "on";
+            this.classList.remove("btn-secondary");
+            this.classList.add("btn-success");
+            this.innerHTML = `<img src="{{ url_for('static', filename='icons/toggle-on.svg') }}" width="24" height="24">`;
+        }
+    });
+</script>
+
+{% endblock %}

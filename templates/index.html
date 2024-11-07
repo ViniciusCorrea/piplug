@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+
+{% block title %}PiPlug - Devices{% endblock %}
+
+{% block content %}
+<h2>Devices</h2>
+<table class="table">
+    <tbody>
+        {% for plug in plugs %}
+        <tr class="align-middle">
+            <td class="text-center">
+                <a href="/device/{{ plug[0] }}" class="btn btn-light">{{ plug[0] }}</a>
+            </td> <!-- Plug ID -->
+            <td class="text-center">
+                <a href="/device/{{ plug[0] }}" class="btn btn-light">{{ plug[1] }}</a>
+            </td> <!-- Device Name -->
+            <td class="text-center">
+                <a href="/toggle_device/{{ plug[0] }}" class="btn btn-secondary">
+                    {% if plug[2] %}
+                        <img src="{{ url_for('static', filename='icons/lightbulb-fill.svg') }}" width="24" height="24" alt="On">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='icons/lightbulb.svg') }}" width="24" height="24" alt="Off">
+                    {% endif %}
+                </a>
+            </td> <!-- State -->
+            <td class="text-center">
+                <a href="/schedules/{{ plug[0] }}" class="btn {{ 'btn-success' if plug_schedules[plug[0]] else 'btn-primary' }}">
+                    <img src="{{ url_for('static', filename='icons/chevron-right.svg') }}" width="20" height="20" alt="Schedules">
+                </a>
+            </td> <!-- Schedule Button -->
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
