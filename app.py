@@ -45,7 +45,7 @@ def initialize_database(num_devices, gpio_values):
             plugID TEXT NOT NULL CHECK (length(plugID) = 3),
             shour INTEGER NOT NULL CHECK (shour BETWEEN 0 AND 23),
             sminute INTEGER NOT NULL CHECK (sminute BETWEEN 0 AND 59),
-            srepeat TEXT CHECK (length(srepeat) <= 23),
+            srepeat TEXT CHECK (length(srepeat) <= 30),
             snewStatus BOOLEAN NOT NULL,
             sactive BOOLEAN NOT NULL,
             FOREIGN KEY (plugID) REFERENCES plug(plugID)
@@ -441,6 +441,253 @@ def clear_log():
     except Exception as e:
         flash(f'Error clearing log: {e}', 'error')
     return redirect(url_for('index'))
+
+@app.route('/add_schedule/<plugID>', methods=['GET', 'POST'])
+def add_schedule(plugID):
+    conn = sqlite3.connect('piplug.db')
+    cursor = conn.cursor()
+
+    # Pegar os dados do dispositivo para renderizar o formulário
+    cursor.execute('SELECT name FROM plug WHERE plugID = ?', (plugID,))
+    plug = cursor.fetchone()
+
+    if not plug:
+        flash("Device not found.", "error")
+        return redirect(url_for('index'))
+
+    name = plug[0]
+
+    if request.method == 'POST':
+        shour = int(request.form['shour'])
+        sminute = int(request.form['sminute'])
+        srepeat = request.form.getlist('srepeat')
+        snewStatus = True if request.form['snewStatus'] == 'On' else False
+
+        # Inserir agendamento na tabela schedule
+        cursor.execute('INSERT INTO schedule (plugID, shour, sminute, snewStatus, sactive, srepeat) VALUES (?, ?, ?, ?, ?, ?)',
+                       (plugID, shour, sminute, snewStatus, True, ','.join(srepeat)))
+        conn.commit()
+
+        # Adicionar tarefa ao APScheduler
+        schedule_id = cursor.lastrowid
+        if srepeat:
+            scheduler.add_job(
+                id=f'schedule_{schedule_id}',
+                func=execute_schedule_action,
+                trigger='cron',
+                hour=shour,
+                minute=sminute,
+                day_of_week=','.join(srepeat),
+                args=[plugID, snewStatus, schedule_id]
+            )
+        else:
+            now = datetime.now()
+            run_time = now.replace(hour=shour, minute=sminute, second=0, microsecond=0)
+            if run_time <= now:
+                run_time += timedelta(days=1)
+            scheduler.add_job(
+                id=f'schedule_{schedule_id}',
+                func=execute_schedule_action,
+                trigger='date',
+                run_date=run_time,
+                args=[plugID, snewStatus, schedule_id]
+            )
+
+        flash("Schedule added successfully.", "success")
+        return redirect(url_for('schedules', plugID=plugID))
+
+    conn.close()
+    return render_template('add_schedule.html', plugID=plugID, name=name, show_log_button=True)
+
+def execute_schedule_action(plugID, snewStatus, schedule_id):
+    try:
+        conn = sqlite3.connect('piplug.db')
+        cursor = conn.cursor()
+
+        # Atualizar o estado do dispositivo
+        cursor.execute('UPDATE plug SET state = ? WHERE plugID = ?', (snewStatus, plugID))
+        conn.commit()
+
+        # Atualizar o estado do dispositivo
+        cursor.execute('UPDATE plug SET state = ? WHERE plugID = ?', (snewStatus, plugID))
+        conn.commit()
+
+        # Acionar o GPIO do dispositivo
+        cursor.execute('SELECT gpio FROM plug WHERE plugID = ?', (plugID,))
+        gpio_pin = cursor.fetchone()
+        
+        if gpio_pin:
+            gpio_pin = gpio_pin[0]          
+            if snewStatus:
+                GPIO.output(gpio_pin, GPIO.HIGH)  # Ligar o dispositivo
+            else:
+                GPIO.output(gpio_pin, GPIO.LOW)   # Desligar o dispositivo
+
+        # Inserir registro no log
+        action = 'plug_on' if snewStatus else 'plug_off'
+        cursor.execute('INSERT INTO log (plugID, origin, action) VALUES (?, ?, ?)', (plugID, 'sched', action))
+        conn.commit()
+
+        # Verificar se o agendamento é recorrente com base no scheduleID
+        cursor.execute('SELECT srepeat FROM schedule WHERE scheduleID = ?', (schedule_id,))
+        repeat_days = cursor.fetchone()
+
+        if not repeat_days or not repeat_days[0]:  # Verifica se srepeat está vazio
+            # Desativa o agendamento e remove do APScheduler se não for recorrente
+            cursor.execute('UPDATE schedule SET sactive = ? WHERE scheduleID = ?', (False, schedule_id))
+            conn.commit()
+            scheduler.remove_job(f'schedule_{schedule_id}')
+
+        conn.close()
+
+    except Exception as e:
+        print(f"Error executing scheduled action for {plugID}: {e}")
+
+
+@app.route('/schedules/<plugID>')
+def schedules(plugID):
+    conn = sqlite3.connect('piplug.db')
+    cursor = conn.cursor()
+
+    # Obter o nome do dispositivo
+    cursor.execute('SELECT name FROM plug WHERE plugID = ?', (plugID,))
+    plug = cursor.fetchone()
+    if not plug:
+        flash("Device not found.", "error")
+        return redirect(url_for('index'))
+    
+    name = plug[0]
+
+    # Obter agendamentos do dispositivo
+    cursor.execute('SELECT scheduleID, shour, sminute, snewStatus, sactive, srepeat FROM schedule WHERE plugID = ? ORDER BY scheduleID DESC', (plugID,))
+    schedules = cursor.fetchall()
+    conn.close()
+
+    # Converter os resultados para uma lista de dicionários
+    schedules_list = []
+    for schedule in schedules:
+        schedules_list.append({
+            'scheduleID': schedule[0],
+            'shour': schedule[1],
+            'sminute': schedule[2],
+            'snewStatus': schedule[3],
+            'sactive': schedule[4],
+            'srepeat': schedule[5]
+        })
+
+    return render_template('schedules.html', plugID=plugID, name=name, schedules=schedules_list, show_log_button=True)
+
+@app.route('/toggle_schedule/<scheduleID>')
+def toggle_schedule(scheduleID):
+    conn = sqlite3.connect('piplug.db')
+    cursor = conn.cursor()
+
+    # Verificar o estado atual de 'sactive'
+    cursor.execute('SELECT sactive, plugID, shour, sminute, snewStatus, srepeat FROM schedule WHERE scheduleID = ?', (scheduleID,))
+    schedule = cursor.fetchone()
+    if not schedule:
+        flash("Schedule not found.", "error")
+        return redirect(url_for('index'))
+    
+    sactive, plugID, shour, sminute, snewStatus, srepeat = schedule
+    new_state = not sactive
+
+    # Atualizar o estado de 'sactive' no banco de dados
+    cursor.execute('UPDATE schedule SET sactive = ? WHERE scheduleID = ?', (new_state, scheduleID))
+    conn.commit()
+
+    if new_state:
+        # Ativar o agendamento
+        if srepeat:
+            scheduler.add_job(
+                id=f'schedule_{scheduleID}',
+                func=execute_schedule_action,
+                trigger='cron',
+                hour=shour,
+                minute=sminute,
+                day_of_week=srepeat,
+                args=[plugID, snewStatus, scheduleID]  # Corrigir o argumento para passar scheduleID
+            )
+        else:
+            run_time = datetime.now().replace(hour=shour, minute=sminute, second=0, microsecond=0)
+            if run_time <= datetime.now():
+                run_time += timedelta(days=1)
+            scheduler.add_job(
+                id=f'schedule_{scheduleID}',
+                func=execute_schedule_action,
+                trigger='date',
+                run_date=run_time,
+                args=[plugID, snewStatus, scheduleID]  # Corrigir o argumento para passar scheduleID
+            )
+    else:
+        # Desativar o agendamento
+        try:
+            scheduler.remove_job(f'schedule_{scheduleID}')
+        except JobLookupError:
+            print(f"Job schedule_{scheduleID} not found.")
+
+    conn.close()
+    return redirect(url_for('schedules', plugID=plugID))
+
+
+@app.route('/edit_schedule/<int:scheduleID>', methods=['GET', 'POST'])
+def edit_schedule(scheduleID):
+    conn = sqlite3.connect('piplug.db')
+    cursor = conn.cursor()
+
+    # Obter os dados do agendamento para preenchimento do formulário
+    cursor.execute('SELECT plugID, shour, sminute, snewStatus, srepeat FROM schedule WHERE scheduleID = ?', (scheduleID,))
+    schedule = cursor.fetchone()
+
+    if not schedule:
+        flash("Schedule not found.", "error")
+        return redirect(url_for('index'))
+
+    plugID, shour, sminute, snewStatus, srepeat = schedule
+
+    if request.method == 'POST':
+        new_shour = int(request.form['shour'])
+        new_sminute = int(request.form['sminute'])
+        new_srepeat = request.form.getlist('srepeat')
+        new_snewStatus = True if request.form['snewStatus'] == 'On' else False
+
+        # Atualizar agendamento no banco de dados
+        cursor.execute('UPDATE schedule SET shour = ?, sminute = ?, snewStatus = ?, srepeat = ? WHERE scheduleID = ?',
+                       (new_shour, new_sminute, new_snewStatus, ','.join(new_srepeat), scheduleID))
+        conn.commit()
+
+        # Atualizar ou adicionar a tarefa no APScheduler
+        scheduler.remove_job(f'schedule_{scheduleID}')
+        if new_srepeat:
+            scheduler.add_job(
+                id=f'schedule_{scheduleID}',
+                func=execute_schedule_action,
+                trigger='cron',
+                hour=new_shour,
+                minute=new_sminute,
+                day_of_week=','.join(new_srepeat),
+                args=[plugID, new_snewStatus]
+            )
+        else:
+            now = datetime.now()
+            run_time = now.replace(hour=new_shour, minute=new_sminute, second=0, microsecond=0)
+            if run_time <= now:
+                run_time += timedelta(days=1)
+            scheduler.add_job(
+                id=f'schedule_{scheduleID}',
+                func=execute_schedule_action,
+                trigger='date',
+                run_date=run_time,
+                args=[plugID, new_snewStatus]
+            )
+
+        flash("Schedule updated successfully.", "success")
+        return redirect(url_for('schedules', plugID=plugID))
+
+    conn.close()
+    return render_template('edit_schedule.html', scheduleID=scheduleID, plugID=plugID, shour=shour, sminute=sminute, snewStatus=snewStatus, srepeat=srepeat)
+
+
 
 if __name__ == '__main__':
     try:
