@@ -1,0 +1,100 @@
+{% extends "layout.html" %}
+
+{% block title %}System Log{% endblock %}
+
+{% block content %}
+    <h2>System Log</h2>
+
+    {% if logs %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Plug</th>
+                    <th>Origin</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                    <tr>
+                        <td>{{ log[0] }}</td>
+                        <td>{{ log[1] }}</td>
+                        <td>{{ log[2] }}</td>
+                        <td>{{ log[3] }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Paginação -->
+        <nav aria-label="Log pagination">
+            <ul class="pagination justify-content-center">
+                {% if page > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('log', page=page-1) }}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">&laquo;</span>
+                    </li>
+                {% endif %}
+
+                {% for p in range(1, total_pages + 1) %}
+                    <li class="page-item {% if p == page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('log', page=p) }}">{{ p }}</a>
+                    </li>
+                {% endfor %}
+
+                {% if page < total_pages %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('log', page=page+1) }}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">&raquo;</span>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% else %}
+        <p class="text-center">No logs recorded.</p>
+    {% endif %}
+
+    <!-- Botões -->
+    <div class="d-flex justify-content-end">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary me-2">
+            <img src="{{ url_for('static', filename='icons/arrow-left-circle.svg') }}" width="24" height="24" alt="Back">
+        </a>
+        <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#clearLogModal">
+            <img src="{{ url_for('static', filename='icons/trash.svg') }}" width="24" height="24" alt="Clear Log">
+        </button>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="clearLogModal" tabindex="-1" aria-labelledby="clearLogModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="clearLogModalLabel">Confirm Deletion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to clear the System Log?
+                </div>
+                <div class="modal-footer">
+                    <a href="{{ url_for('log') }}" class="btn btn-secondary">
+                        <img src="{{ url_for('static', filename='icons/arrow-left-circle.svg') }}" width="24" height="24" alt="Back">
+                    </a>
+                    <a href="{{ url_for('clear_log') }}" class="btn btn-danger">
+                        <img src="{{ url_for('static', filename='icons/trash.svg') }}" width="24" height="24" alt="Clear">
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
