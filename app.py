@@ -629,13 +629,12 @@ def toggle_schedule(scheduleID):
     conn.close()
     return redirect(url_for('schedules', plugID=plugID))
 
-
 @app.route('/edit_schedule/<int:scheduleID>', methods=['GET', 'POST'])
 def edit_schedule(scheduleID):
     conn = sqlite3.connect('piplug.db')
     cursor = conn.cursor()
 
-    # Obter os dados do agendamento para preenchimento do formulário
+    # Obter os dados do agendamento
     cursor.execute('SELECT plugID, shour, sminute, snewStatus, srepeat FROM schedule WHERE scheduleID = ?', (scheduleID,))
     schedule = cursor.fetchone()
 
@@ -645,19 +644,32 @@ def edit_schedule(scheduleID):
 
     plugID, shour, sminute, snewStatus, srepeat = schedule
 
+    # Obter o nome do dispositivo
+    cursor.execute('SELECT name FROM plug WHERE plugID = ?', (plugID,))
+    plug = cursor.fetchone()
+    name = plug[0] if plug else "Unknown"
+
     if request.method == 'POST':
+        # Obter dados do formulário
         new_shour = int(request.form['shour'])
         new_sminute = int(request.form['sminute'])
         new_srepeat = request.form.getlist('srepeat')
         new_snewStatus = True if request.form['snewStatus'] == 'On' else False
 
-        # Atualizar agendamento no banco de dados
-        cursor.execute('UPDATE schedule SET shour = ?, sminute = ?, snewStatus = ?, srepeat = ? WHERE scheduleID = ?',
-                       (new_shour, new_sminute, new_snewStatus, ','.join(new_srepeat), scheduleID))
+        # Atualizar o agendamento na tabela schedule
+        cursor.execute('''
+            UPDATE schedule
+            SET shour = ?, sminute = ?, snewStatus = ?, sactive = ?, srepeat = ?
+            WHERE scheduleID = ?
+        ''', (new_shour, new_sminute, new_snewStatus, True, ','.join(new_srepeat), scheduleID))
         conn.commit()
 
-        # Atualizar ou adicionar a tarefa no APScheduler
-        scheduler.remove_job(f'schedule_{scheduleID}')
+        # Atualizar o agendamento no APScheduler
+        try:
+            scheduler.remove_job(f'schedule_{scheduleID}')
+        except JobLookupError:
+            pass  # Se não existir, ignore
+
         if new_srepeat:
             scheduler.add_job(
                 id=f'schedule_{scheduleID}',
@@ -666,27 +678,54 @@ def edit_schedule(scheduleID):
                 hour=new_shour,
                 minute=new_sminute,
                 day_of_week=','.join(new_srepeat),
-                args=[plugID, new_snewStatus]
+                args=[plugID, new_snewStatus, scheduleID]
             )
         else:
-            now = datetime.now()
-            run_time = now.replace(hour=new_shour, minute=new_sminute, second=0, microsecond=0)
-            if run_time <= now:
+            run_time = datetime.now().replace(hour=new_shour, minute=new_sminute, second=0, microsecond=0)
+            if run_time <= datetime.now():
                 run_time += timedelta(days=1)
             scheduler.add_job(
                 id=f'schedule_{scheduleID}',
                 func=execute_schedule_action,
                 trigger='date',
                 run_date=run_time,
-                args=[plugID, new_snewStatus]
+                args=[plugID, new_snewStatus, scheduleID]
             )
 
         flash("Schedule updated successfully.", "success")
         return redirect(url_for('schedules', plugID=plugID))
 
     conn.close()
-    return render_template('edit_schedule.html', scheduleID=scheduleID, plugID=plugID, shour=shour, sminute=sminute, snewStatus=snewStatus, srepeat=srepeat)
+    return render_template('edit_schedule.html', scheduleID=scheduleID, plugID=plugID, name=name, shour=shour, sminute=sminute, snewStatus=snewStatus, srepeat=srepeat, show_log_button=True)
 
+@app.route('/delete_schedule/<int:scheduleID>', methods=['POST'])
+def delete_schedule(scheduleID):
+    conn = sqlite3.connect('piplug.db')
+    cursor = conn.cursor()
+
+    # Obter o plugID para redirecionar corretamente após a exclusão
+    cursor.execute('SELECT plugID FROM schedule WHERE scheduleID = ?', (scheduleID,))
+    schedule = cursor.fetchone()
+
+    if schedule:
+        plugID = schedule[0]
+        # Remover do banco de dados
+        cursor.execute('DELETE FROM schedule WHERE scheduleID = ?', (scheduleID,))
+        conn.commit()
+
+        # Remover do APScheduler
+        try:
+            scheduler.remove_job(f'schedule_{scheduleID}')
+        except JobLookupError:
+            pass  # Se não existir, ignore
+
+        flash("Schedule deleted successfully.", "success")
+        return redirect(url_for('schedules', plugID=plugID))
+    else:
+        flash("Schedule not found.", "error")
+        return redirect(url_for('index'))
+
+    conn.close()
 
 
 if __name__ == '__main__':
