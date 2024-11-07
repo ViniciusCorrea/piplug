@@ -1,0 +1,65 @@
+{% extends "layout.html" %}
+
+{% block title %}Schedules for {{ name }}{% endblock %}
+
+{% block content %}
+<h2>Schedules for {{ name }}</h2>
+
+{% if schedules %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Repeat</th>
+                <th>On/Off</th>
+                <th>Active</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for schedule in schedules %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('edit_schedule', scheduleID=schedule['scheduleID']) }}">
+                            {{ "%02d" | format(schedule['shour']) }}:{{ "%02d" | format(schedule['sminute']) }}
+                        </a>
+                    </td>
+                    <td>
+                        {% if schedule['srepeat'] == '' %}
+                            Just Once
+                        {% elif schedule['srepeat'] == 'Mon,Tue,Wed,Thu,Fri' %}
+                            Week days
+                        {% elif schedule['srepeat'] == 'Sun,Sat' %}
+                            Weekends
+                        {% elif schedule['srepeat'] == 'Sun,Mon,Tue,Wed,Thu,Fri,Sat' %}
+                            Every day
+                        {% elif schedule['srepeat']|length >= 19 %}
+                            Custom
+                        {% else %}
+                            {{ schedule['srepeat'] }}
+                        {% endif %}
+                    </td>
+                    <td>{{ 'On' if schedule['snewStatus'] else 'Off' }}</td>
+                    <td>
+                        <a href="{{ url_for('toggle_schedule', scheduleID=schedule['scheduleID']) }}"
+                           class="btn {{ 'btn-success' if schedule['sactive'] else 'btn-secondary' }}">
+                            <img src="{{ url_for('static', filename='icons/' + ('toggle-on.svg' if schedule['sactive'] else 'toggle-off.svg')) }}"
+                                 width="24" height="24" alt="Toggle">
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No schedules registered for this device.</p>
+{% endif %}
+
+<div class="d-flex justify-content-between">
+    <a href="{{ url_for('index') }}" class="btn btn-secondary">
+        <img src="{{ url_for('static', filename='icons/arrow-left-circle.svg') }}" width="24" height="24" alt="Back">
+    </a>
+    <a href="{{ url_for('add_schedule', plugID=plugID) }}" class="btn btn-primary">
+        <img src="{{ url_for('static', filename='icons/plus-circle.svg') }}" width="24" height="24" alt="Add Schedule">
+    </a>
+</div>
+{% endblock %}

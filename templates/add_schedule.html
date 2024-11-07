@@ -1,0 +1,64 @@
+{% extends "layout.html" %}
+
+{% block title %}Add Schedule for {{ name }}{% endblock %}
+
+{% block content %}
+<h2>Add Schedule for {{ name }}</h2>
+
+<form method="POST" action="{{ url_for('add_schedule', plugID=plugID) }}">
+    <div class="mb-3">
+        <label for="shour" class="form-label">Hour</label>
+        <input type="number" class="form-control" id="shour" name="shour" min="0" max="23" required>
+    </div>
+    <div class="mb-3">
+        <label for="sminute" class="form-label">Minute</label>
+        <input type="number" class="form-control" id="sminute" name="sminute" min="0" max="59" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Repeat</label><br>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" id="Sun" name="srepeat" value="Sun">
+            <label class="form-check-label" for="Sun">Sun</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" id="Mon" name="srepeat" value="Mon">
+            <label class="form-check-label" for="Mon">Mon</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" id="Tue" name="srepeat" value="Tue">
+            <label class="form-check-label" for="Tue">Tue</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" id="Wed" name="srepeat" value="Wed">
+            <label class="form-check-label" for="Wed">Wed</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" id="Thu" name="srepeat" value="Thu">
+            <label class="form-check-label" for="Thu">Thu</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" id="Fri" name="srepeat" value="Fri">
+            <label class="form-check-label" for="Fri">Fri</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" id="Sat" name="srepeat" value="Sat">
+            <label class="form-check-label" for="Sat">Sat</label>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label for="snewStatus" class="form-label">On/Off</label>
+        <select class="form-select" id="snewStatus" name="snewStatus" required>
+            <option value="On">On</option>
+            <option value="Off">Off</option>
+        </select>
+    </div>
+    <div class="d-flex justify-content-end">
+        <a href="{{ url_for('schedules', plugID=plugID) }}" class="btn btn-secondary me-2">
+            <img src="{{ url_for('static', filename='icons/arrow-left-circle.svg') }}" width="24" height="24" alt="Return">
+        </a>
+        <button type="submit" class="btn btn-primary">
+            <img src="{{ url_for('static', filename='icons/check-circle.svg') }}" width="24" height="24" alt="Save">
+        </button>
+    </div>
+</form>
+{% endblock %}
