@@ -406,7 +406,41 @@ def execute_timer_action(plugID):
     finally:
         conn.close()
 
+@app.route('/log')
+def log():
+    # Número de registros por página
+    per_page = 15
+    # Obter o número da página atual a partir dos parâmetros da URL
+    page = request.args.get('page', 1, type=int)
+    offset = (page - 1) * per_page
 
+    # Conectar ao banco de dados e buscar os registros com paginação
+    conn = sqlite3.connect('piplug.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT COUNT(*) FROM log')
+    total_logs = cursor.fetchone()[0]
+
+    cursor.execute('SELECT date, plugID, origin, action FROM log ORDER BY date DESC LIMIT ? OFFSET ?', (per_page, offset))
+    logs = cursor.fetchall()
+    conn.close()
+
+    # Calcular o número total de páginas
+    total_pages = (total_logs // per_page) + (1 if total_logs % per_page > 0 else 0)
+
+    return render_template('log.html', logs=logs, page=page, total_pages=total_pages, show_log_button=False)
+
+@app.route('/clear_log')
+def clear_log():
+    try:
+        conn = sqlite3.connect('piplug.db')
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM log')
+        conn.commit()
+        conn.close()
+        flash('System log cleared successfully.', 'success')
+    except Exception as e:
+        flash(f'Error clearing log: {e}', 'error')
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     try:
