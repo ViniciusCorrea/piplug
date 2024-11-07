@@ -1,0 +1,67 @@
+{% extends "layout.html" %}
+
+{% block title %}Edit Schedule for {{ name }}{% endblock %}
+
+{% block content %}
+<h2>Edit Schedule for {{ name }}</h2>
+<form method="POST">
+    <div class="mb-3">
+        <label for="shour" class="form-label">Hour</label>
+        <input type="number" id="shour" name="shour" class="form-control" value="{{ shour }}" min="0" max="23" required>
+    </div>
+    <div class="mb-3">
+        <label for="sminute" class="form-label">Minute</label>
+        <input type="number" id="sminute" name="sminute" class="form-control" value="{{ sminute }}" min="0" max="59" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Repeat</label><br>
+        {% for day in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] %}
+            <input type="checkbox" name="srepeat" value="{{ day }}"
+                {% if day in srepeat.split(',') %}checked{% endif %}>
+            {{ day }}
+        {% endfor %}
+    </div>
+    <div class="mb-3">
+        <label for="snewStatus" class="form-label">On/Off</label>
+        <select id="snewStatus" name="snewStatus" class="form-control">
+            <option value="On" {% if snewStatus %}selected{% endif %}>On</option>
+            <option value="Off" {% if not snewStatus %}selected{% endif %}>Off</option>
+        </select>
+    </div>
+    <div class="d-flex justify-content-between">
+        <a href="{{ url_for('schedules', plugID=plugID) }}" class="btn btn-secondary">
+            <img src="{{ url_for('static', filename='icons/arrow-left-circle.svg') }}" alt="Back" width="20" height="20">
+        </a>
+        <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+            <img src="{{ url_for('static', filename='icons/trash.svg') }}" alt="Delete" width="20" height="20">
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <img src="{{ url_for('static', filename='icons/check-circle.svg') }}" alt="Save" width="20" height="20">
+        </button>
+    </div>
+</form>
+
+<!-- Modal para confirmação de exclusão -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmDeleteModalLabel">Confirm Deletion</h5>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this schedule?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <img src="{{ url_for('static', filename='icons/arrow-left-circle.svg') }}" alt="Cancel" width="20" height="20">
+                </button>
+                <form action="{{ url_for('delete_schedule', scheduleID=scheduleID) }}" method="POST" style="display:inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <img src="{{ url_for('static', filename='icons/trash.svg') }}" alt="Delete" width="20" height="20">
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
