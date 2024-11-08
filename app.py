@@ -6,6 +6,8 @@ from apscheduler.jobstores.base import JobLookupError
 import os
 import RPi.GPIO as GPIO
 import atexit
+import pytz
+from tzlocal import get_localzone
 
 # Initialize the Flask application
 app = Flask(__name__)
@@ -504,10 +506,19 @@ def log():
     logs = cursor.fetchall()
     conn.close()
 
+    # Convert dates to system time zone
+    local_tz = get_localzone()
+    logs_converted = []
+    for log in logs:
+        date, plug_id, origin, action = log
+        date_utc = datetime.strptime(date, '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.utc)
+        date_local = date_utc.astimezone(local_tz).strftime('%Y-%m-%d %H:%M:%S')
+        logs_converted.append((date_local, plug_id, origin, action))
+
     # Calculate the total number of pages
     total_pages = (total_logs // per_page) + (1 if total_logs % per_page > 0 else 0)
 
-    return render_template('log.html', logs=logs, page=page, total_pages=total_pages, show_log_button=False)
+    return render_template('log.html', logs=logs_converted, page=page, total_pages=total_pages, show_log_button=False)
 
 @app.route('/clear_log')
 def clear_log():
