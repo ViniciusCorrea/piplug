@@ -5,9 +5,14 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.base import JobLookupError
 import os
 import RPi.GPIO as GPIO
+import atexit
 
+# Initialize the Flask application
 app = Flask(__name__)
+
 app.secret_key = 'your_secret_key'
+
+# Configure the APScheduler
 scheduler = BackgroundScheduler()
 scheduler.start()
 
@@ -109,15 +114,60 @@ def setup_gpio_pins():
         GPIO.output(gpio_pin, GPIO.LOW)  # Turn off initially
     conn.close()
 
-def turn_off_all_devices():
-    """Turn off all devices by setting their GPIO pins to low."""
-    conn = sqlite3.connect('piplug.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT gpio FROM plug")
-    gpios = cursor.fetchall()
-    for gpio in gpios:
-        GPIO.output(gpio[0], GPIO.LOW)
-    conn.close()
+# Function to load active schedules from the database and schedule them
+def load_active_schedules():
+    try:
+        conn = sqlite3.connect('piplug.db')
+        cursor = conn.cursor()
+
+        # Retrieve all active schedules from the database
+        cursor.execute('SELECT scheduleID, plugID, shour, sminute, snewStatus, srepeat FROM schedule WHERE sactive = ?', (True,))
+        active_schedules = cursor.fetchall()
+
+        # Schedule each active job in APScheduler
+        for schedule in active_schedules:
+            schedule_id, plugID, shour, sminute, snewStatus, srepeat = schedule
+
+            if srepeat:  # Create a recurring job based on specified days
+                scheduler.add_job(
+                    id=f'schedule_{schedule_id}',
+                    func=execute_schedule_action,
+                    trigger='cron',
+                    hour=shour,
+                    minute=sminute,
+                    day_of_week=srepeat,
+                    args=[plugID, snewStatus, schedule_id]
+                )
+            else:  # Create a one-time job for the next occurrence
+                now = datetime.now()
+                run_time = now.replace(hour=shour, minute=sminute, second=0, microsecond=0)
+                if run_time <= now:
+                    run_time += timedelta(days=1)
+                scheduler.add_job(
+                    id=f'schedule_{schedule_id}',
+                    func=execute_schedule_action,
+                    trigger='date',
+                    run_date=run_time,
+                    args=[plugID, snewStatus, schedule_id]
+                )
+
+        conn.close()
+        print("Active schedules loaded successfully.")
+    except Exception as e:
+        print(f"Error loading active schedules: {e}")
+
+# Function to deactivate all jobs in APScheduler when the server shuts down
+def shutdown_scheduler():
+    try:
+        # Remove all active jobs from APScheduler
+        for job in scheduler.get_jobs():
+            scheduler.remove_job(job.id)
+        print("All active schedules have been deactivated.")
+    except Exception as e:
+        print(f"Error shutting down scheduler: {e}")
+
+# Register the shutdown function with atexit to ensure it runs on server exit
+atexit.register(shutdown_scheduler)
 
 @app.before_first_request
 def server_startup():
@@ -129,7 +179,7 @@ def server_startup():
         print("Initializing system configurations...")
         initialize_timer_tactive()
         setup_gpio_pins()
-        turn_off_all_devices()
+        load_active_schedules()
         app.config['STARTUP_REDIRECT'] = False
 
 @app.route('/toggle_device/<plugID>')
@@ -728,4 +778,4 @@ if __name__ == '__main__':
     try:
         app.run(host='0.0.0.0', port=5000, debug=True)
     finally:
-        GPIO.cleanup()  # Ensure GPIO cleanup if the server crashes
+        GPIO.cleanup()
