@@ -169,9 +169,8 @@ def shutdown_scheduler():
 # Register the shutdown function with atexit to ensure it runs on server exit
 atexit.register(shutdown_scheduler)
 
-@app.before_first_request
+# Run startup routines when the server starts.
 def server_startup():
-    """Run startup routines when the server first starts."""
     if not check_database():
         print("Database does not exist, redirecting to setup.")
         app.config['STARTUP_REDIRECT'] = True
@@ -776,6 +775,7 @@ def delete_schedule(scheduleID):
 
 if __name__ == '__main__':
     try:
-        app.run(host='0.0.0.0', port=5000, debug=True)
+        server_startup()
+        app.run(host='0.0.0.0', port=5000, debug=False)
     finally:
         GPIO.cleanup()
