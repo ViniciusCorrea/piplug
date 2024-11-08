@@ -19,7 +19,7 @@ PiPlug is a web-based platform designed to manage and schedule GPIO-controlled d
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/yourusername/piplug.git
+   git clone https://github.com/ViniciusCorrea/piplug.git
    cd piplug
 
 2. **Install dependencies**: Ensure you have pip installed and run:
