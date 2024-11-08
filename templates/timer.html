@@ -3,19 +3,27 @@
 {% block title %}Timer for {{ name }}{% endblock %}
 
 {% block content %}
-<h2>Timer for {{ name }}</h2>
+<h2>Timer for {{ name }}</h2><br>
 
 <form method="POST" action="{{ url_for('timer', plugID=plugID) }}" onsubmit="return validateForm()">
-    <!-- Checkbox para ativar/desativar o timer -->
+
     <div class="form-group mb-3">
-        <label>Activate Timer:</label>
-        <button type="button" id="toggleActivated" class="btn {% if tactive %}btn-success{% else %}btn-secondary{% endif %}">
-            <img src="{{ url_for('static', filename='icons/toggle-on.svg') if tactive else url_for('static', filename='icons/toggle-off.svg') }}" width="24" height="24">
+        <h5>Activate Timer:
+        <button type="button" id="toggleActivated" class="btn {% if tactive %}btn-success{% else %}btn-secondary{% endif %} float-end">
+            {% if tactive %}
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-toggle-on" viewBox="0 0 16 16">
+                <path d="M5 3a5 5 0 0 0 0 10h6a5 5 0 0 0 0-10zm6 9a4 4 0 1 1 0-8 4 4 0 0 1 0 8"/>
+            </svg>
+            {% else %}
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-toggle-off" viewBox="0 0 16 16">
+                <path d="M11 4a4 4 0 0 1 0 8H8a5 5 0 0 0 2-4 5 5 0 0 0-2-4zm-6 8a4 4 0 1 1 0-8 4 4 0 0 1 0 8M0 8a5 5 0 0 0 5 5h6a5 5 0 0 0 0-10H5a5 5 0 0 0-5 5"/>
+            </svg>
+            {% endif %} 
         </button>
         <input type="hidden" id="activated" name="tactive" value="{{ 'on' if tactive else 'off' }}">
+    </h5>
     </div>
 
-    <!-- Campo de entrada de horas e minutos -->
     <div class="form-group mb-3">
         <label for="hourInput">Hour:</label>
         <input type="number" id="hourInput" name="hour" min="0" max="23" value="{{ thour }}" class="form-control" required>
@@ -25,22 +33,25 @@
         <input type="number" id="minuteInput" name="minute" min="0" max="59" value="{{ tminute }}" class="form-control" required>
     </div>
 
-    <!-- Dropdown para tnewState -->
     <div class="form-group mb-3">
-        <label for="newStatusSelect">Action:</label>
-        <select id="newStatusSelect" name="newStatus" class="form-control">
+        <label for="newStatusSelect">On/Off</label>
+        <select id="newStatusSelect" name="newStatus" class="form-select">
             <option value="on" {% if tnewState %}selected{% endif %}>On</option>
             <option value="off" {% if not tnewState %}selected{% endif %}>Off</option>
         </select>
     </div>
 
-    <!-- Botões de navegação -->
-    <div class="d-flex justify-content-end">
+    <div class="d-flex float-end">
         <a href="{{ url_for('device', plugID=plugID) }}" class="btn btn-secondary me-2">
-            <img src="{{ url_for('static', filename='icons/arrow-left-circle.svg') }}" width="24" height="24" alt="Back">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-arrow-left-circle" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8m15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-4.5-.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5z"/>
+            </svg>
         </a>
-        <button type="submit" class="btn btn-primary">
-            <img src="{{ url_for('static', filename='icons/check-circle.svg') }}" width="24" height="24" alt="Save">
+        <button type="submit" class="btn btn-primary ms-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-check-circle" viewBox="0 0 16 16">
+                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                <path d="m10.97 4.97-.02.022-3.473 4.425-2.093-2.094a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05"/>
+            </svg>
         </button>
     </div>
 </form>
@@ -52,12 +63,18 @@
             activatedInput.value = "off";
             this.classList.remove("btn-success");
             this.classList.add("btn-secondary");
-            this.innerHTML = `<img src="{{ url_for('static', filename='icons/toggle-off.svg') }}" width="24" height="24">`;
+            this.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-toggle-off" viewBox="0 0 16 16">
+                    <path d="M11 4a4 4 0 0 1 0 8H8a5 5 0 0 0 2-4 5 5 0 0 0-2-4zm-6 8a4 4 0 1 1 0-8 4 4 0 0 1 0 8M0 8a5 5 0 0 0 5 5h6a5 5 0 0 0 0-10H5a5 5 0 0 0-5 5"/>
+                </svg>`;
         } else {
             activatedInput.value = "on";
             this.classList.remove("btn-secondary");
             this.classList.add("btn-success");
-            this.innerHTML = `<img src="{{ url_for('static', filename='icons/toggle-on.svg') }}" width="24" height="24">`;
+            this.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-toggle-on" viewBox="0 0 16 16">
+                    <path d="M5 3a5 5 0 0 0 0 10h6a5 5 0 0 0 0-10zm6 9a4 4 0 1 1 0-8 4 4 0 0 1 0 8"/>
+                </svg>`;
         }
     });
 </script>

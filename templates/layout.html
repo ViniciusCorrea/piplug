@@ -1,4 +1,19 @@
 <!DOCTYPE html>
+
+<style>
+    @media (min-width: 550px) {
+        main, header {
+            max-width: 550px;
+            margin: 20px auto;
+        }
+    }
+    @media (max-width: 550px) {
+    main, header {
+            margin: 20px;
+        }
+    }
+</style>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -19,7 +34,7 @@
     </header>
 
     <!-- Main Content Section -->
-    <main class="container mt-4">
+    <main>
         {% block content %}{% endblock %}
     </main>
 
@@ -38,12 +53,17 @@
                 <div class="modal-footer">
                     <!-- Return Button -->
                     <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">
-                        <img src="{{ url_for('static', filename='icons/arrow-left-circle.svg') }}" width="24" height="24" alt="Return">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-arrow-left-circle" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8m15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-4.5-.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5z"/>
+                        </svg>
                     </button>
                     <!-- Log Button -->
                     {% if show_log_button %}
                     <a href="/log" class="btn btn-light ms-2">
-                        <img src="{{ url_for('static', filename='icons/file-text-fill.svg') }}" width="24" height="24" alt="Log">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-file-text" viewBox="0 0 16 16">
+                            <path d="M5 4a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1zm-.5 2.5A.5.5 0 0 1 5 6h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5M5 8a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1zm0 2a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1z"/>
+                            <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zm10-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1"/>
+                        </svg>
                     </a>
                     {% endif %}
                 </div>

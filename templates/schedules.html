@@ -8,42 +8,56 @@
 {% if schedules %}
     <table class="table">
         <thead>
-            <tr>
-                <th>Time</th>
-                <th>Repeat</th>
-                <th>On/Off</th>
-                <th>Active</th>
+            <tr class="align-middle">
+                <th class="text-center">Time</th>
+                <th class="text-center">Repeat</th>
+                <th class="text-center">On/Off</th>
+                <th class="text-center">Active</th>
             </tr>
         </thead>
         <tbody>
             {% for schedule in schedules %}
-                <tr>
-                    <td>
-                        <a href="{{ url_for('edit_schedule', scheduleID=schedule['scheduleID']) }}">
+                <tr class="align-middle">
+                    <td class="text-center">
+                        <a href="{{ url_for('edit_schedule', scheduleID=schedule['scheduleID']) }} " class="btn btn-light">
                             {{ "%02d" | format(schedule['shour']) }}:{{ "%02d" | format(schedule['sminute']) }}
                         </a>
                     </td>
-                    <td>
-                        {% if schedule['srepeat'] == '' %}
-                            Just Once
-                        {% elif schedule['srepeat'] == 'Mon,Tue,Wed,Thu,Fri' %}
-                            Week days
-                        {% elif schedule['srepeat'] == 'Sun,Sat' %}
-                            Weekends
-                        {% elif schedule['srepeat'] == 'Sun,Mon,Tue,Wed,Thu,Fri,Sat' %}
-                            Every day
-                        {% elif schedule['srepeat']|length >= 19 %}
-                            Custom
-                        {% else %}
-                            {{ schedule['srepeat'] }}
-                        {% endif %}
+                    <td class="text-center">
+                        <a href="{{ url_for('edit_schedule', scheduleID=schedule['scheduleID']) }} " class="btn btn-light">
+                            {% if schedule['srepeat'] == '' %}
+                                Just Once
+                            {% elif schedule['srepeat'] == 'Mon,Tue,Wed,Thu,Fri' %}
+                                Week days
+                            {% elif schedule['srepeat'] == 'Sun,Sat' %}
+                                Weekends
+                            {% elif schedule['srepeat'] == 'Sun,Mon,Tue,Wed,Thu,Fri,Sat' %}
+                                Every day
+                            {% elif schedule['srepeat']|length >= 19 %}
+                                Custom
+                            {% else %}
+                                {{ schedule['srepeat'] }}
+                            {% endif %}
+                        </a>
                     </td>
-                    <td>{{ 'On' if schedule['snewStatus'] else 'Off' }}</td>
-                    <td>
+                    <td class="text-center">
+                        <a href="{{ url_for('edit_schedule', scheduleID=schedule['scheduleID']) }} " class="btn btn-light">
+                       {{ 'On' if schedule['snewStatus'] else 'Off' }}
+                        </a>
+                    </td>
+                    <td class="text-center">
                         <a href="{{ url_for('toggle_schedule', scheduleID=schedule['scheduleID']) }}"
-                           class="btn {{ 'btn-success' if schedule['sactive'] else 'btn-secondary' }}">
-                            <img src="{{ url_for('static', filename='icons/' + ('toggle-on.svg' if schedule['sactive'] else 'toggle-off.svg')) }}"
-                                 width="24" height="24" alt="Toggle">
+                            {% if schedule['sactive'] %}
+                                class="btn btn-success">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-toggle-on" viewBox="0 0 16 16">
+                                    <path d="M5 3a5 5 0 0 0 0 10h6a5 5 0 0 0 0-10zm6 9a4 4 0 1 1 0-8 4 4 0 0 1 0 8"/>
+                                </svg>
+                            {% else %}
+                                class="btn btn-secondary">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentC\olor" class="bi bi-toggle-off" viewBox="0 0 16 16">
+                                    <path d="M11 4a4 4 0 0 1 0 8H8a5 5 0 0 0 2-4 5 5 0 0 0-2-4zm-6 8a4 4 0 1 1 0-8 4 4 0 0 1 0 8M0 8a5 5 0 0 0 5 5h6a5 5 0 0 0 0-10H5a5 5 0 0 0-5 5"/>
+                                </svg>
+                            {% endif %}
                         </a>
                     </td>
                 </tr>
@@ -54,12 +68,29 @@
     <p>No schedules registered for this device.</p>
 {% endif %}
 
-<div class="d-flex justify-content-between">
-    <a href="{{ url_for('index') }}" class="btn btn-secondary">
-        <img src="{{ url_for('static', filename='icons/arrow-left-circle.svg') }}" width="24" height="24" alt="Back">
+<div class="d-flex float-end">
+    <a href="{{ url_for('index') }}" class="btn btn-secondary me-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-arrow-left-circle" viewBox="0 0 16 16">
+            <path fill-rule="evenodd" d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8m15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-4.5-.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5z"/>
+        </svg>
     </a>
-    <a href="{{ url_for('add_schedule', plugID=plugID) }}" class="btn btn-primary">
-        <img src="{{ url_for('static', filename='icons/plus-circle.svg') }}" width="24" height="24" alt="Add Schedule">
+    <a href="{{ url_for('add_schedule', plugID=plugID) }}" class="btn btn-primary ms-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-plus-circle" viewBox="0 0 16 16">
+            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+            <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
+        </svg>
     </a>
 </div>
+
+<style>
+    td:nth-child(1) a,
+    td:nth-child(2) a,
+    td:nth-child(3) a {
+        display: block;
+        width: 100%;
+        height: 100%;
+        text-align: center;
+        padding: 10px;
+    }
+</style>
 {% endblock %}
