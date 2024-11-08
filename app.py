@@ -135,11 +135,11 @@ def server_startup():
 @app.route('/toggle_device/<plugID>')
 def toggle_device(plugID):
     try:
-        # Conecte ao banco de dados
+        # Connect to database
         conn = sqlite3.connect('piplug.db')
         cursor = conn.cursor()
         
-        # Obtenha as informações do dispositivo
+        # Get device information
         cursor.execute('SELECT gpio, state FROM plug WHERE plugID = ?', (plugID,))
         device = cursor.fetchone()
         
@@ -152,17 +152,17 @@ def toggle_device(plugID):
         # Toggle the state (True -> False or False -> True)
         new_state = not current_state
         
-        # Atualize o estado do pino GPIO
+        # Update GPIO pin state
         if new_state:
             GPIO.output(gpio_pin, GPIO.HIGH)
         else:
             GPIO.output(gpio_pin, GPIO.LOW)
         
-        # Atualize o estado no banco de dados
+        # Update the state in the database
         cursor.execute('UPDATE plug SET state = ? WHERE plugID = ?', (new_state, plugID))
         conn.commit()
         
-        # Insira um registro no log
+        # Insert a record into the log
         action = "plug_on" if new_state else "plug_off"
         cursor.execute('INSERT INTO log (plugID, origin, action) VALUES (?, ?, ?)', (plugID, 'manual', action))
         conn.commit()
@@ -230,7 +230,7 @@ def setup():
 
     return render_template('setup.html', show_log_button=False)
 
-# Função para obter informações do dispositivo
+# Function to get device information
 def get_device_info(plugID):
     conn = sqlite3.connect('piplug.db')
     cursor = conn.cursor()
@@ -246,11 +246,11 @@ def get_device_info(plugID):
 @app.route('/device/<plugID>')
 def device(plugID):
     try:
-        # Conectar ao banco de dados
+        # Connect to database
         conn = sqlite3.connect('piplug.db')
         cursor = conn.cursor()
 
-        # Obter os dados do dispositivo e do timer
+        # Get device and timer data
         cursor.execute('SELECT name, gpio, state FROM plug WHERE plugID = ?', (plugID,))
         plug = cursor.fetchone()
 
@@ -264,7 +264,7 @@ def device(plugID):
         name, gpio, state = plug
         thour, tminute, tnewState, tactive = timer_data
 
-        # Verificar se o timer está ativo no APScheduler
+        # Check if the timer is active in APScheduler
         job_id = f"timer_{plugID}" 
         job = scheduler.get_job(job_id)
         time_remaining = None
@@ -308,7 +308,7 @@ def timer(plugID):
     conn = sqlite3.connect('piplug.db')
     cursor = conn.cursor()
 
-    # Buscar informações do dispositivo e timer
+    # Fetch device and timer information
     cursor.execute('SELECT name FROM plug WHERE plugID = ?', (plugID,))
     device = cursor.fetchone()
     if not device:
@@ -325,22 +325,22 @@ def timer(plugID):
     thour, tminute, tnewState, tactive = timer_info
 
     if request.method == 'POST':
-        # Ler dados do formulário
+        # Read form data
         thour = int(request.form['hour'])
         tminute = int(request.form['minute'])
         tnewState = request.form['newStatus'] == 'on'
         tactive = request.form['tactive'] == 'on'
 
-        # Atualizar os valores na tabela timer
+        # Update values ​​in timer table
         cursor.execute('''
             UPDATE timer SET thour = ?, tminute = ?, tnewState = ?, tactive = ? WHERE plugID = ?
         ''', (thour, tminute, tnewState, tactive, plugID))
         conn.commit()
 
-        # Agendar/desagendar o timer
+        # Schedule/unschedule the timer
         job_id = f"timer_{plugID}"
         if tactive:
-            # Adicionar ou atualizar o job de agendamento
+            # Add or update scheduling job
             run_time = datetime.now() + timedelta(hours=thour, minutes=tminute)
             scheduler.add_job(
                 func=execute_timer_action,
@@ -352,7 +352,7 @@ def timer(plugID):
             )
             flash("Timer scheduled successfully.", "success")
         else:
-            # Remover o job de agendamento se desativado
+            # Remove scheduling job if disabled
             try:
                 scheduler.remove_job(job_id)
             except JobLookupError:
@@ -369,7 +369,7 @@ def execute_timer_action(plugID):
         conn = sqlite3.connect('piplug.db')
         cursor = conn.cursor()
         
-        # Obter os detalhes do dispositivo e do timer
+        # Get device and timer details
         cursor.execute('SELECT gpio, tnewState FROM timer JOIN plug ON timer.plugID = plug.plugID WHERE timer.plugID = ?', (plugID,))
         result = cursor.fetchone()
         
@@ -379,7 +379,7 @@ def execute_timer_action(plugID):
         
         gpio_pin, tnewState = result
         
-        # Acionar o GPIO
+        # Trigger GPIO
         if tnewState:
             GPIO.output(gpio_pin, GPIO.HIGH)
             action = 'plug_on'
@@ -387,15 +387,15 @@ def execute_timer_action(plugID):
             GPIO.output(gpio_pin, GPIO.LOW)
             action = 'plug_off'
         
-        # Atualizar o estado do dispositivo no banco de dados
+        # Update device status in database
         cursor.execute('UPDATE plug SET state = ? WHERE plugID = ?', (tnewState, plugID))
         conn.commit()
         
-        # Inserir registro no log
+        # Insert record into log
         cursor.execute('INSERT INTO log (plugID, origin, action) VALUES (?, ?, ?)', (plugID, 'timer', action))
         conn.commit()
 
-        # Desativar o timer após a execução
+        # Disable timer after execution
         cursor.execute('UPDATE timer SET tactive = 0 WHERE plugID = ?', (plugID,))
         conn.commit()
 
@@ -408,13 +408,13 @@ def execute_timer_action(plugID):
 
 @app.route('/log')
 def log():
-    # Número de registros por página
+    # Number of records per page
     per_page = 15
-    # Obter o número da página atual a partir dos parâmetros da URL
+    # Get current page number from URL parameters
     page = request.args.get('page', 1, type=int)
     offset = (page - 1) * per_page
 
-    # Conectar ao banco de dados e buscar os registros com paginação
+    # Connect to the database and fetch records with pagination
     conn = sqlite3.connect('piplug.db')
     cursor = conn.cursor()
     cursor.execute('SELECT COUNT(*) FROM log')
@@ -424,7 +424,7 @@ def log():
     logs = cursor.fetchall()
     conn.close()
 
-    # Calcular o número total de páginas
+    # Calculate the total number of pages
     total_pages = (total_logs // per_page) + (1 if total_logs % per_page > 0 else 0)
 
     return render_template('log.html', logs=logs, page=page, total_pages=total_pages, show_log_button=False)
@@ -447,7 +447,7 @@ def add_schedule(plugID):
     conn = sqlite3.connect('piplug.db')
     cursor = conn.cursor()
 
-    # Pegar os dados do dispositivo para renderizar o formulário
+    # Get data from the device to render the form
     cursor.execute('SELECT name FROM plug WHERE plugID = ?', (plugID,))
     plug = cursor.fetchone()
 
@@ -463,12 +463,12 @@ def add_schedule(plugID):
         srepeat = request.form.getlist('srepeat')
         snewStatus = True if request.form['snewStatus'] == 'On' else False
 
-        # Inserir agendamento na tabela schedule
+        # Insert schedule into schedule table
         cursor.execute('INSERT INTO schedule (plugID, shour, sminute, snewStatus, sactive, srepeat) VALUES (?, ?, ?, ?, ?, ?)',
                        (plugID, shour, sminute, snewStatus, True, ','.join(srepeat)))
         conn.commit()
 
-        # Adicionar tarefa ao APScheduler
+        # Add task to APScheduler
         schedule_id = cursor.lastrowid
         if srepeat:
             scheduler.add_job(
@@ -504,36 +504,32 @@ def execute_schedule_action(plugID, snewStatus, schedule_id):
         conn = sqlite3.connect('piplug.db')
         cursor = conn.cursor()
 
-        # Atualizar o estado do dispositivo
+        # Update device status
         cursor.execute('UPDATE plug SET state = ? WHERE plugID = ?', (snewStatus, plugID))
         conn.commit()
 
-        # Atualizar o estado do dispositivo
-        cursor.execute('UPDATE plug SET state = ? WHERE plugID = ?', (snewStatus, plugID))
-        conn.commit()
-
-        # Acionar o GPIO do dispositivo
+        # Trigger the device's GPIO
         cursor.execute('SELECT gpio FROM plug WHERE plugID = ?', (plugID,))
         gpio_pin = cursor.fetchone()
         
         if gpio_pin:
             gpio_pin = gpio_pin[0]          
             if snewStatus:
-                GPIO.output(gpio_pin, GPIO.HIGH)  # Ligar o dispositivo
+                GPIO.output(gpio_pin, GPIO.HIGH)  # Turn on the device
             else:
-                GPIO.output(gpio_pin, GPIO.LOW)   # Desligar o dispositivo
+                GPIO.output(gpio_pin, GPIO.LOW)   # Turn off the device
 
-        # Inserir registro no log
+        # Insert record into log
         action = 'plug_on' if snewStatus else 'plug_off'
         cursor.execute('INSERT INTO log (plugID, origin, action) VALUES (?, ?, ?)', (plugID, 'sched', action))
         conn.commit()
 
-        # Verificar se o agendamento é recorrente com base no scheduleID
+        # Check if schedule is recurring based on scheduleID
         cursor.execute('SELECT srepeat FROM schedule WHERE scheduleID = ?', (schedule_id,))
         repeat_days = cursor.fetchone()
 
-        if not repeat_days or not repeat_days[0]:  # Verifica se srepeat está vazio
-            # Desativa o agendamento e remove do APScheduler se não for recorrente
+        if not repeat_days or not repeat_days[0]:  # Check if srepeat is empty
+            # Disables scheduling and removes it from APScheduler if it is not recurring
             cursor.execute('UPDATE schedule SET sactive = ? WHERE scheduleID = ?', (False, schedule_id))
             conn.commit()
             scheduler.remove_job(f'schedule_{schedule_id}')
@@ -549,7 +545,7 @@ def schedules(plugID):
     conn = sqlite3.connect('piplug.db')
     cursor = conn.cursor()
 
-    # Obter o nome do dispositivo
+    # Get Device Name
     cursor.execute('SELECT name FROM plug WHERE plugID = ?', (plugID,))
     plug = cursor.fetchone()
     if not plug:
@@ -558,12 +554,12 @@ def schedules(plugID):
     
     name = plug[0]
 
-    # Obter agendamentos do dispositivo
+    # Get device schedules
     cursor.execute('SELECT scheduleID, shour, sminute, snewStatus, sactive, srepeat FROM schedule WHERE plugID = ? ORDER BY scheduleID DESC', (plugID,))
     schedules = cursor.fetchall()
     conn.close()
 
-    # Converter os resultados para uma lista de dicionários
+    # Convert the results to a list of dictionaries
     schedules_list = []
     for schedule in schedules:
         schedules_list.append({
@@ -582,7 +578,7 @@ def toggle_schedule(scheduleID):
     conn = sqlite3.connect('piplug.db')
     cursor = conn.cursor()
 
-    # Verificar o estado atual de 'sactive'
+    # Check the current status of 'sactive'
     cursor.execute('SELECT sactive, plugID, shour, sminute, snewStatus, srepeat FROM schedule WHERE scheduleID = ?', (scheduleID,))
     schedule = cursor.fetchone()
     if not schedule:
@@ -592,12 +588,12 @@ def toggle_schedule(scheduleID):
     sactive, plugID, shour, sminute, snewStatus, srepeat = schedule
     new_state = not sactive
 
-    # Atualizar o estado de 'sactive' no banco de dados
+    # Update the status of 'sactive' in the database
     cursor.execute('UPDATE schedule SET sactive = ? WHERE scheduleID = ?', (new_state, scheduleID))
     conn.commit()
 
     if new_state:
-        # Ativar o agendamento
+        # Enable scheduling
         if srepeat:
             scheduler.add_job(
                 id=f'schedule_{scheduleID}',
@@ -606,7 +602,7 @@ def toggle_schedule(scheduleID):
                 hour=shour,
                 minute=sminute,
                 day_of_week=srepeat,
-                args=[plugID, snewStatus, scheduleID]  # Corrigir o argumento para passar scheduleID
+                args=[plugID, snewStatus, scheduleID]
             )
         else:
             run_time = datetime.now().replace(hour=shour, minute=sminute, second=0, microsecond=0)
@@ -617,10 +613,10 @@ def toggle_schedule(scheduleID):
                 func=execute_schedule_action,
                 trigger='date',
                 run_date=run_time,
-                args=[plugID, snewStatus, scheduleID]  # Corrigir o argumento para passar scheduleID
+                args=[plugID, snewStatus, scheduleID]
             )
     else:
-        # Desativar o agendamento
+        # Disable scheduling
         try:
             scheduler.remove_job(f'schedule_{scheduleID}')
         except JobLookupError:
@@ -634,7 +630,7 @@ def edit_schedule(scheduleID):
     conn = sqlite3.connect('piplug.db')
     cursor = conn.cursor()
 
-    # Obter os dados do agendamento
+    # Get the scheduling data
     cursor.execute('SELECT plugID, shour, sminute, snewStatus, srepeat FROM schedule WHERE scheduleID = ?', (scheduleID,))
     schedule = cursor.fetchone()
 
@@ -644,19 +640,19 @@ def edit_schedule(scheduleID):
 
     plugID, shour, sminute, snewStatus, srepeat = schedule
 
-    # Obter o nome do dispositivo
+    # Get Device Name
     cursor.execute('SELECT name FROM plug WHERE plugID = ?', (plugID,))
     plug = cursor.fetchone()
     name = plug[0] if plug else "Unknown"
 
     if request.method == 'POST':
-        # Obter dados do formulário
+        # Get form data
         new_shour = int(request.form['shour'])
         new_sminute = int(request.form['sminute'])
         new_srepeat = request.form.getlist('srepeat')
         new_snewStatus = True if request.form['snewStatus'] == 'On' else False
 
-        # Atualizar o agendamento na tabela schedule
+        # Update the schedule in the schedule table
         cursor.execute('''
             UPDATE schedule
             SET shour = ?, sminute = ?, snewStatus = ?, sactive = ?, srepeat = ?
@@ -664,11 +660,11 @@ def edit_schedule(scheduleID):
         ''', (new_shour, new_sminute, new_snewStatus, True, ','.join(new_srepeat), scheduleID))
         conn.commit()
 
-        # Atualizar o agendamento no APScheduler
+        # Update the schedule in APScheduler
         try:
             scheduler.remove_job(f'schedule_{scheduleID}')
         except JobLookupError:
-            pass  # Se não existir, ignore
+            pass  # If it doesn't exist, ignore it
 
         if new_srepeat:
             scheduler.add_job(
@@ -703,21 +699,21 @@ def delete_schedule(scheduleID):
     conn = sqlite3.connect('piplug.db')
     cursor = conn.cursor()
 
-    # Obter o plugID para redirecionar corretamente após a exclusão
+    # Get plugID to redirect correctly after deletion
     cursor.execute('SELECT plugID FROM schedule WHERE scheduleID = ?', (scheduleID,))
     schedule = cursor.fetchone()
 
     if schedule:
         plugID = schedule[0]
-        # Remover do banco de dados
+        # Remove from database
         cursor.execute('DELETE FROM schedule WHERE scheduleID = ?', (scheduleID,))
         conn.commit()
 
-        # Remover do APScheduler
+        # Remove from APScheduler
         try:
             scheduler.remove_job(f'schedule_{scheduleID}')
         except JobLookupError:
-            pass  # Se não existir, ignore
+            pass  # If it doesn't exist, ignore it
 
         flash("Schedule deleted successfully.", "success")
         return redirect(url_for('schedules', plugID=plugID))
