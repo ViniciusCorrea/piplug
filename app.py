@@ -157,17 +157,46 @@ def load_active_schedules():
         print(f"Error loading active schedules: {e}")
 
 # Function to deactivate all jobs in APScheduler when the server shuts down
-def shutdown_scheduler():
+def shutdown_server():
     try:
         # Remove all active jobs from APScheduler
         for job in scheduler.get_jobs():
             scheduler.remove_job(job.id)
         print("All active schedules have been deactivated.")
+        log_server_end()
     except Exception as e:
         print(f"Error shutting down scheduler: {e}")
 
 # Register the shutdown function with atexit to ensure it runs on server exit
-atexit.register(shutdown_scheduler)
+atexit.register(shutdown_server)
+
+# Insert a record into the log table indicating the server startup
+def log_server_start():
+    try:
+        conn = sqlite3.connect('piplug.db')
+        cursor = conn.cursor()
+
+        # Inserir dados na tabela log
+        cursor.execute('INSERT INTO log (plugID, origin, action) VALUES (?, ?, ?)', ('---', 'start', 'server_on'))
+        conn.commit()
+        conn.close()
+        print("Server startup log inserted successfully.")
+    except Exception as e:
+        print(f"Failed to log server startup: {e}")
+
+# Insert a record into the log table indicating the server ending
+def log_server_end():
+    try:
+        conn = sqlite3.connect('piplug.db')
+        cursor = conn.cursor()
+
+        # Inserir dados na tabela log
+        cursor.execute('INSERT INTO log (plugID, origin, action) VALUES (?, ?, ?)', ('---', 'end', 'server_off'))
+        conn.commit()
+        conn.close()
+        print("Server ending log inserted successfully.")
+    except Exception as e:
+        print(f"Failed to log server ending: {e}")
 
 # Run startup routines when the server starts.
 def server_startup():
@@ -179,6 +208,7 @@ def server_startup():
         initialize_timer_tactive()
         setup_gpio_pins()
         load_active_schedules()
+        log_server_start()
         app.config['STARTUP_REDIRECT'] = False
 
 @app.route('/toggle_device/<plugID>')
@@ -270,6 +300,7 @@ def setup():
             # Initialize database and add records
             initialize_database(num_devices, gpio_values)
             setup_gpio_pins()
+            log_server_start()
             # Set startup redirect to False or remove this check after the first initialization
             app.config['STARTUP_REDIRECT'] = False
             return redirect(url_for('index'))
