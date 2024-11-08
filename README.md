@@ -1,4 +1,4 @@
-# PiPlug
+# <img src="static/images/logo.png" alt="PiPlug Logo" width="50"> PiPlug
 
 PiPlug is a web-based platform designed to manage and schedule GPIO-controlled devices. It allows users to toggle devices, set up schedules, and monitor system logs through a user-friendly interface.
 
