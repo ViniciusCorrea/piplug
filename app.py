@@ -1,20 +1,20 @@
 from flask import Flask, render_template, redirect, url_for, request, flash
-import sqlite3
-from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.base import JobLookupError
-import os
+from datetime import datetime, timedelta
+from tzlocal import get_localzone
 import RPi.GPIO as GPIO
+import sqlite3
 import atexit
 import pytz
-from tzlocal import get_localzone
+import os
 
 # Initialize the Flask application
 app = Flask(__name__)
 
 app.secret_key = 'your_secret_key'
 
-# Configure the APScheduler
+# Configure the APSchedulecdr
 scheduler = BackgroundScheduler()
 scheduler.start()
 
