@@ -14,7 +14,7 @@ app = Flask(__name__)
 
 app.secret_key = 'your_secret_key'
 
-# Configure the APSchedulecdr
+# Configure the APScheduler
 scheduler = BackgroundScheduler()
 scheduler.start()
 
